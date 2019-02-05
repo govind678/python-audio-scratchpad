@@ -262,12 +262,13 @@ for frame in xrange(0, numFrames, hopSize):
 
 	# Read wave audio block as Float32 n-dim numpy array
 	inHop = readWaveFileByBlock(inWaveFile, hopSize, byteDepth, numChannels)
+	numFramesRead = inHop.shape[0]
 
 	# Apply pre-gain
 	inHop = inHop * dB2Lin(preGainDB)
 
 	# Write the 'hop' into input ring buffer
-	inRingBuffer.writeAtIdx(inHop, frame, hopSize)
+	inRingBuffer.writeAtIdx(inHop, frame, numFramesRead)
 
 	# Read buffer size from input ring buffer
 	sig = inRingBuffer.readAtIdx(frame + blockSize, blockSize)
@@ -373,11 +374,11 @@ for frame in xrange(0, numFrames, hopSize):
 	# Write into output ring buffer
 	outRingBuffer.writeAtIdx(out, frame, blockSize)
 
-	# Read 'hop' and write to WAV file
-	writeWaveFileByBlock(outWaveFile, outRingBuffer.readAtIdx(frame, hopSize), byteDepth, numChannels) 
+	# Read 'hop' that was just finished from output ring buffer and write to WAV file
+	writeWaveFileByBlock(outWaveFile, outRingBuffer.readAtIdx(frame, numFramesRead), byteDepth, numChannels) 
 
 	# Clear output 'hop' for next overlap-add
-	outRingBuffer.writeAtIdx(np.zeros((hopSize, numChannels)), frame, hopSize)
+	outRingBuffer.writeAtIdx(np.zeros((numFramesRead, numChannels)), frame, numFramesRead)
 
 
 # --- End audio block processing --- #	
