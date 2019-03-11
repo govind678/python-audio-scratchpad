@@ -4,7 +4,7 @@
 # 
 # FreqCancel.py
 # 
-# Note: Using Python 2.7
+# Note: Using Python 3.7
 # 
 # Feb 2, 2019
 # -----------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def readWaveFileByBlock(waveFileHandle, numFramesToRead, byteDepth, numChannels)
 	else:
 		sys.exit("Error: Unsupported wav file byte depth: {}".format(byteDepth))
 
-	outData = np.reshape(np.asarray(struct.unpack(dataFormatString, inByteData), dtype=np.float32), (samplesJustRead / numChannels, numChannels))
+	outData = np.reshape(np.asarray(struct.unpack(dataFormatString, inByteData), dtype=np.float32), (int(samplesJustRead / numChannels), numChannels))
 	outData = (outData - offset) / scale
 	return outData
 
@@ -71,19 +71,21 @@ def writeWaveFileByBlock(waveFileHandle, outFrames, byteDepth, numChannels):
 		clip_max = float(np.iinfo(np.uint8).max)
 		scale = (clip_max / 2.0) + 1.0
 		offset = scale
+		dataType = np.int8
 	elif byteDepth == 2:
 		dataFormatString = "<%ih" % (numFramesToWrite * numChannels)
 		clip_min = float(np.iinfo(np.int16).min)
 		clip_max = float(np.iinfo(np.int16).max)
 		scale = clip_max
 		offset = 0 
+		dataType = np.int16
 	# elif byteDepth == 3:
 		# dataFormatString = ""
 	else:
 		sys.exit("Error: Currently only supports 8 and 16 bit wave files. Unsupported {} bit(s)".format(byteDepth*8))
 
 	outFrames = np.clip((outFrames + offset) * scale, clip_min, clip_max)
-	outByteData = struct.pack(dataFormatString, *(np.ravel(outFrames)))
+	outByteData = struct.pack(dataFormatString, *(np.ravel(outFrames.astype(dataType))))
 	waveFileHandle.writeframes(outByteData)
 
 
@@ -258,7 +260,7 @@ dftOut2 = np.zeros(blockSize, dtype=np.complex_)
 # -------------------------------------------------------------
 # Start block-wise audio processing
 # -------------------------------------------------------------
-for frame in xrange(0, numFrames, hopSize):
+for frame in range(0, numFrames, hopSize):
 
 	# Read wave audio block as Float32 n-dim numpy array
 	inHop = readWaveFileByBlock(inWaveFile, hopSize, byteDepth, numChannels)
@@ -282,7 +284,7 @@ for frame in xrange(0, numFrames, hopSize):
 	dft2 = fft(sig2)
 
 	# Convert cartesian (real + imag) to polar (magnitude, phase)
-	for f in xrange(0, blockSize):
+	for f in range(0, blockSize):
 		pol1[f] = cmath.polar(dft1[f])
 		pol2[f] = cmath.polar(dft2[f])
 
@@ -316,7 +318,7 @@ for frame in xrange(0, numFrames, hopSize):
 	#  - then zero that particular frequency component (and vice-versa).
 	#  - Improvements needed :)
 
-	for f in xrange(0, blockSize):
+	for f in range(0, blockSize):
 		if outMag1[f] > outMag2[f]:
 			outMag2[f] = 0.0
 		elif outMag2[f] > outMag1[f]:
@@ -338,7 +340,7 @@ for frame in xrange(0, numFrames, hopSize):
 	outMag2 = outMag2 * ((blockSize / 2.0) + 1.0)
 
 	# Convert polar back to cartesian
-	for f in xrange(0, blockSize):
+	for f in range(0, blockSize):
 		dftOut1[f] = cmath.rect(outMag1[f], pol1[f,1])
 		dftOut2[f] = cmath.rect(outMag2[f], pol2[f,1])
 
@@ -390,4 +392,4 @@ outWaveFile.close()
 
 
 # Finish
-print "Finished! Elapsed time: {}. Output at : {}".format((time.time() - startTime), outFilepath)
+print("Finished! Elapsed time: %f. Output at : %s", ((time.time() - startTime), outFilepath))
